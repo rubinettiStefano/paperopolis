@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+
+
+  <style>
+    .rotating-image {
+      animation: spin 8s linear infinite,moveSideToSideReverse 4s ease-in-out infinite;; /* Applica l'animazione */
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg); /* Inizio senza rotazione */
+      }
+      to {
+        transform: rotate(360deg); /* Rotazione completa */
+      }
+    }
+
+    #paperopolist {
+      background-color: red; /* Colore di sfondo */
+      position: absolute; /* Necessario per il movimento */
+      transform: translateY(-50%); /* Allinea perfettamente al centro */
+      animation:  moveSideToSide 4s ease-in-out infinite; /* Applica animazione */
+    }
+
+    /* Definizione dell'animazione */
+    @keyframes moveSideToSide {
+      0% {
+        left: 90%; /* Inizio da fuori schermo a destra */
+        top: 10vh;/* Inizio da fuori schermo a destra */
+      }
+      33% {
+        left: 0; /* Va fino al bordo sinistro */
+        top: 80vh; /* Va fino al bordo sinistro */
+      }
+      66% {
+        left: 0%; /* Torna indietro al bordo destro */
+        top: 10vh; /* Torna indietro al bordo destro */
+      }
+      100% {
+        left: 90%; /* Torna indietro al bordo destro */
+        top: 10vh; /* Torna indietro al bordo destro */
+      }
+    }
+
+    @keyframes moveSideToSideReverse {
+      0% {
+        left: 90%; /* Torna indietro al bordo destro */
+        top: 10vh; /* Torna indietro al bordo destro */
+      }
+      33% {
+        left: 0%; /* Torna indietro al bordo destro */
+        top: 10vh; /* Torna indietro al bordo destro */
+      }
+      66% {
+        left: 0; /* Va fino al bordo sinistro */
+        top: 80vh; /* Va fino al bordo sinistro */
+      }
+      100% {
+        left: 90%; /* Inizio da fuori schermo a destra */
+        top: 10vh; /* Inizio da fuori schermo a destra */
+      }
+    }
+
+    @keyframes spinBackground {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: url("https://media-assets.wired.it/photos/633075a824420c533dde3521/16:9/w_2560%2Cc_limit/170984546");
+      background-size: 400% 400%;
+      animation: spinBackground 8s linear infinite;
+      overflow: hidden; /* Evita lo scrolling */
+    }
+
+    #paperopoform {
+      display: flex;
+      flex-direction: column; /* Dispone gli input in colonna */
+      align-items: center; /* Centra gli input orizzontalmente */
+      justify-content: center;
+      padding: 20px;
+      border: 2px solid black;
+      border-radius: 10px;
+      background-color: white;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+
+
+<script>
+
+  //sarà la mia lista di paperini
+  let mieiPaperini = null;
+
+  //funzione che viene chiamata in automatico quando la pagina viene caricata
+  function prendiIPaperiniDalServeConAJAX()
+  {
+    //qui faccio una request GET a /mannaggina
+    //la response conterrà il JSON di 3 paperini
+    //perchè il mio metodo nel rest controller produce una lista di 3 paperini
+    // [
+    //   {
+    //     "urlo": "Quack!",
+    //     "condanna": "Condanna 1"
+    //   },
+    //   {
+    //     "urlo": "Quack Quack!",
+    //     "condanna": "Condanna 2"
+    //   },
+    //   {
+    //     "urlo": "Super Quack!",
+    //     "condanna": "Condanna 3"
+    //   }
+    // ]
+    $.ajax({
+      url: "/mannaggina",
+      method: "GET",
+      //qui gli passo la callBack, la FUNZIONE DA CHIAMARE QUANDO ARRIVA LA RESPONSE
+      //success si ""TRIGGERA"" quando arriva la response, sì
+      success: riempiListaPaperini
+      //qui non lo vedete ma in automatico gli passa anche un parametro, contenente il body della response
+      //il JSON sopracitato
+    })
+  }
+
+  //qui arriva in automatico come parametro il JSON PARSATO, che io chiamo "responseDelMannagginaDiServer"
+  function riempiListaPaperini(responseDelMannagginaDiServer)
+  {
+    mieiPaperini = responseDelMannagginaDiServer;//lo mette nella lista
+    graficaPaperini();//chiama la funzione che grafica la pagina
+  }
+
+  function graficaPaperini()
+  {
+    let cont = `<h1>PAPERINI</h1>`
+    for(let p of mieiPaperini)
+      cont+=`<p>${p.id} ${p.urlo}  ${p.condanna}</p>`
+
+    document.getElementById('paperopolist').innerHTML = cont;
+  }
+
+  function salvaPapeffimero(event)
+  {
+    event.preventDefault();
+    //vado a pigghiare a form
+    let miaForm = document.getElementById('paperopoform');
+    console.log("form prima della conversione",miaForm);
+    let formConvertitaInOggetto = Object.fromEntries(new FormData(miaForm).entries());
+    console.log("form dopo la conversione",formConvertitaInOggetto);
+    let mannajson = JSON.stringify(formConvertitaInOggetto);
+    console.log("form dopo la JSONIZZAZIONE ",mannajson);
+
+    $.ajax({
+      url: "/mannaggina",
+      method: "POST",
+      contentType: "application/json",
+      data: mannajson,
+      success:aggiungiPaperinoAllaLista
+    })
+  }
+
+  //                              qui ci sarà il JSON restituito da server
+  //                          {"id":8,"urlo":"yeeeeeeeeeee","condanna":"MANNAGGINA PAPEROTTO"}
+  function aggiungiPaperinoAllaLista(ilPapeffimero)
+  {
+    //lo aggiungo alla lista
+    mieiPaperini.push(ilPapeffimero);
+    //rigrafico la lista anche con lui dentro
+    graficaPaperini();
+  }
+
+
+</script>
+
+
+<body>
+
+<div style="position:relative">
+<div id="paperopolist">
+
+
+</div>
+
+<form style="width: 100px" class="rotating-image" id="paperopoform" onsubmit="salvaPapeffimero(event)">
+  <input type="text" name="urlo" />
+  <input type="submit" value="submit" />
+</form>
+
+  <img class="rotating-image" style="position:absolute;bottom:100;left:500" src="https://suonalancorasam.com/wp-content/uploads/2014/06/repubblica-it.jpg" />
+</div>
+<script>prendiIPaperiniDalServeConAJAX()</script>
+</body>
+</html>
